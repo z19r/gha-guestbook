@@ -1,0 +1,152 @@
+name: 'Guestbook Signer'
+description: 'Append issue messages to a README guestbook section'
+author: 'gha-guestbook contributors'
+
+branding:
+  icon: 'book-open'
+  color: 'blue'
+
+inputs:
+  github_token:
+    description: 'Token with contents:write and issues:write'
+    required: true
+  guestbook_label:
+    description: 'Issue label required to process signing'
+    required: false
+    default: 'guestbook'
+  readme_path:
+    description: 'Path to README containing guestbook markers'
+    required: false
+    default: 'README.md'
+  close_issue:
+    description: 'Whether to post thanks and close issue'
+    required: false
+    default: 'true'
+
+outputs:
+  signed:
+    description: 'true when a guestbook entry was added'
+    value: ${{ steps.sign.outputs.signed }}
+  guest_user:
+    description: 'Username that signed the guestbook'
+    value: ${{ steps.sign.outputs.guest_user }}
+  entry_number:
+    description: 'New guestbook entry number'
+    value: ${{ steps.sign.outputs.entry_number }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: sign
+      name: Sign guestbook entry
+      uses: actions/github-script@v7
+      env:
+        README_PATH: ${{ inputs.readme_path }}
+        LABEL_NAME: ${{ inputs.guestbook_label }}
+      with:
+        github-token: ${{ inputs.github_token }}
+        script: |
+          const fs = require('fs');
+          const readmePath = process.env.README_PATH;
+          const labelName = process.env.LABEL_NAME;
+          const issue = context.payload.issue;
+
+          if (!issue) {
+            core.setFailed('No issue payload found in this event.');
+            return;
+          }
+
+          const labels = (issue.labels || []).map((l) => l.name);
+          if (!labels.includes(labelName)) {
+            core.info(`Issue is missing label: ${labelName}`);
+            core.setOutput('signed', 'false');
+            return;
+          }
+
+          const readme = fs.readFileSync(readmePath, 'utf8');
+          const start = '<!-- GUESTBOOK:START -->';
+          const end = '<!-- GUESTBOOK:END -->';
+
+          if (!readme.includes(start) || !readme.includes(end)) {
+            const msg = `Guestbook boundaries not found in ${readmePath}`;
+            core.setFailed(msg);
+            return;
+          }
+
+          const sanitize = (str) =>
+            str.replace(/<!--/g, '')
+              .replace(/-->/g, '')
+              .replace(/\s+/g, ' ')
+              .trim();
+
+          const title = sanitize(issue.title || '').slice(0, 120);
+          const body = sanitize(issue.body || '').slice(0, 400);
+          const user = issue.user.login;
+          const date = new Date().toLocaleDateString(
+            'en-US',
+            { month: 'short', day: 'numeric', year: 'numeric' }
+          );
+
+          const messagePart = body ? `: ${body}` : '';
+          const entry =
+            `> **${title}**${messagePart} _— @${user}, ${date}_`;
+
+          let updated = readme.replace(end, `${entry}\n\n${end}`);
+
+          const guestbookSection = updated
+            .split(start)[1]
+            .split(end)[0];
+          const entryLines = guestbookSection
+            .split('\n')
+            .filter((line) => line.trim().startsWith('> **'));
+          const newCount = entryLines.length;
+          const plural = newCount === 1 ? 'Entry' : 'Entries';
+
+          updated = updated.replace(
+            /^(##\s*📖\s*GuestBook\s*).+$/m,
+            `$1— ${newCount} ${plural}`
+          );
+
+          fs.writeFileSync(readmePath, updated);
+          core.setOutput('signed', 'true');
+          core.setOutput('guest_user', user);
+          core.setOutput('entry_number', String(newCount));
+
+    - name: Commit README update
+      if: ${{ steps.sign.outputs.signed == 'true' }}
+      shell: bash
+      run: |
+        git config user.name "guestbook[bot]"
+        git config user.email "guestbook[bot]@users.noreply.github.com"
+        git add "${{ inputs.readme_path }}"
+        if git diff --cached --quiet; then
+          echo "No README changes to commit."
+          exit 0
+        fi
+        git commit -m "guestbook entry update"
+        git push
+
+    - name: Thank signer and close issue
+      if: ${{ inputs.close_issue == 'true' &&
+        steps.sign.outputs.signed == 'true' }}
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ inputs.github_token }}
+        script: |
+          const issue = context.payload.issue;
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: issue.number,
+            body: (
+              `Thanks for signing the guestbook, @${issue.user.login}! ` +
+              '📖✨'
+            ),
+          });
+          await github.rest.issues.update({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: issue.number,
+            state: 'closed',
+            state_reason: 'completed',
+          });

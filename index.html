@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GitHub Guestbook — Issue-Powered Guestbook Action</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Turn GitHub Issues into a guestbook. A Marketplace-ready composite action that appends entries to your README.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --c-void:     #07030E;
+  --c-obsidian: #110628;
+  --c-grape:    #2A0F5C;
+  --c-bruise:   #4A1FA8;
+  --c-royal:    #6B2FE0;
+  --c-lilac:    #A78BFA;
+  --c-mist:     #DCD0FF;
+
+  --c-acid:     #D6FF2E;
+  --c-magenta:  #FF2E93;
+  --c-bone:     #F5F2E8;
+  --c-ink:      #07030E;
+
+  --bg:           var(--c-void);
+  --bg-elevated:  var(--c-obsidian);
+  --bg-card:      var(--c-obsidian);
+  --fg:           var(--c-bone);
+  --fg-muted:     var(--c-mist);
+  --fg-dim:       var(--c-lilac);
+  --accent:       var(--c-acid);
+  --accent-hot:   var(--c-magenta);
+  --brand:        var(--c-royal);
+  --rule:         #2A1B4F;
+  --rule-hot:     var(--c-royal);
+
+  --f-sans: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  --f-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', monospace;
+
+  --t-display: 700 clamp(56px, 8vw, 112px)/0.85 var(--f-sans);
+  --t-h1:      700 56px/0.95 var(--f-sans);
+  --t-h2:      700 36px/1.0  var(--f-sans);
+  --t-h3:      600 24px/1.1  var(--f-sans);
+  --t-h4:      600 18px/1.2  var(--f-sans);
+  --t-body:    400 17px/1.5  var(--f-sans);
+  --t-small:   500 13px/1.4  var(--f-sans);
+  --t-mono:    500 15px/1.5  var(--f-mono);
+  --t-tag:     700 11px/1.3  var(--f-mono);
+
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+  --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px; --s-9: 96px;
+
+  --b-thin: 1.5px;
+  --b-med:  2px;
+  --b-thick: 4px;
+
+  --sh-sm:    4px 4px 0 0 var(--c-acid);
+  --sh-md:    8px 8px 0 0 var(--c-acid);
+  --sh-lg:    14px 14px 0 0 var(--c-acid);
+  --sh-mag:   8px 8px 0 0 var(--c-magenta);
+  --sh-royal: 8px 8px 0 0 var(--c-royal);
+  --sh-stack: 8px 8px 0 0 var(--c-magenta), 16px 16px 0 0 var(--c-acid);
+}
+
+.surface-bone {
+  --bg:           var(--c-bone);
+  --bg-elevated:  #ECE7D6;
+  --bg-card:      var(--c-bone);
+  --fg:           var(--c-ink);
+  --fg-muted:     #2A1B4F;
+  --fg-dim:       #6B2FE0;
+  --accent:       var(--c-magenta);
+  --accent-hot:   var(--c-royal);
+  --rule:         #1F1A0E;
+  --rule-hot:     var(--c-magenta);
+}
+
+.surface-acid {
+  --bg:           var(--c-acid);
+  --bg-elevated:  #BFE325;
+  --bg-card:      var(--c-acid);
+  --fg:           var(--c-ink);
+  --fg-muted:     #2A0F5C;
+  --fg-dim:       #4A1FA8;
+  --accent:       var(--c-magenta);
+  --accent-hot:   var(--c-royal);
+  --rule:         #07030E;
+  --rule-hot:     var(--c-magenta);
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: var(--t-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.ws-grid {
+  background-image:
+    linear-gradient(rgba(167,139,250,0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(167,139,250,0.08) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.wrap { max-width: 1200px; margin: 0 auto; padding: 0 var(--s-7); }
+
+a { color: var(--accent); text-decoration: none; border-bottom: 1.5px solid currentColor; }
+a:hover { color: var(--accent-hot); }
+
+/* ── BUTTONS ─────────────────────────────────── */
+.btn {
+  font-family: var(--f-sans);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  padding: 14px 22px;
+  border: var(--b-med) solid var(--fg);
+  background: var(--fg);
+  color: var(--bg);
+  box-shadow: var(--sh-md);
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: transform 80ms linear, box-shadow 80ms linear;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.btn:hover  { transform: translate(-2px,-2px); box-shadow: 12px 12px 0 0 var(--accent); border-bottom: var(--b-med) solid var(--fg); }
+.btn:active { transform: translate(4px,4px);  box-shadow: 2px 2px 0 0 var(--accent); }
+.btn--primary { background: var(--accent); border-color: var(--accent); color: var(--c-ink); }
+.btn--primary:hover { box-shadow: 12px 12px 0 0 var(--accent-hot); }
+.btn--ghost { background: transparent; color: var(--fg); border-color: var(--fg); box-shadow: 8px 8px 0 0 var(--brand); }
+.btn--ghost:hover { background: var(--brand); color: var(--c-bone); box-shadow: 12px 12px 0 0 var(--accent-hot); }
+.btn .glyph { font-family: var(--f-mono); font-weight: 700; }
+
+/* ── BADGES ──────────────────────────────────── */
+.badge {
+  font: var(--t-tag);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border: var(--b-thin) solid currentColor;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+}
+.badge .pulse { width: 6px; height: 6px; background: currentColor; }
+.badge--acid    { color: var(--c-acid); background: rgba(214,255,46,0.08); }
+.badge--mag     { color: var(--c-magenta); background: rgba(255,46,147,0.08); }
+.badge--royal   { color: var(--c-lilac); background: rgba(107,47,224,0.18); border-color: var(--c-royal); }
+
+/* ── CARDS ───────────────────────────────────── */
+.card {
+  background: var(--bg-card);
+  border: var(--b-med) solid var(--fg);
+  padding: var(--s-5);
+  box-shadow: var(--sh-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.card .eyebrow {
+  font: var(--t-tag);
+  color: var(--accent);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.card .title {
+  font: var(--t-h3);
+  color: var(--fg);
+  letter-spacing: -0.02em;
+}
+.card .body { font-size: 14px; color: var(--fg-muted); line-height: 1.45; }
+
+/* ── CODE BLOCK ──────────────────────────────── */
+.code {
+  font-family: var(--f-mono);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--c-mist);
+  background: var(--c-void);
+  border: var(--b-med) solid var(--c-bone);
+  box-shadow: var(--sh-md);
+  overflow: hidden;
+}
+.code-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 14px;
+  border-bottom: var(--b-med) solid var(--c-bone);
+  background: var(--c-obsidian);
+  font: var(--t-tag);
+  color: var(--c-acid);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.code-head .dots { display: flex; gap: 6px; }
+.code-head .dot { width: 10px; height: 10px; background: var(--c-magenta); }
+.code-head .dot:nth-child(2) { background: var(--c-acid); }
+.code-head .dot:nth-child(3) { background: var(--c-bone); }
+.code-body {
+  padding: var(--s-4) var(--s-5);
+  white-space: pre;
+  overflow-x: auto;
+}
+.code-body .k  { color: var(--c-magenta); }
+.code-body .s  { color: var(--c-acid); }
+.code-body .c  { color: var(--c-lilac); opacity: 0.7; font-style: italic; }
+
+/* ── INLINE CODE ─────────────────────────────── */
+.icode {
+  font-family: var(--f-mono);
+  font-size: 0.92em;
+  background: rgba(214,255,46,0.08);
+  color: var(--accent);
+  border: var(--b-thin) solid var(--accent);
+  padding: 1px 6px;
+}
+
+/* ── HERO ────────────────────────────────────── */
+.hero {
+  padding: var(--s-9) 0 var(--s-8);
+  border-bottom: var(--b-med) solid var(--c-ink);
+}
+.hero .eyebrow {
+  font: var(--t-tag);
+  color: var(--c-ink);
+  letter-spacing: 0.18em;
+  display: inline-block;
+  background: var(--c-bone);
+  padding: 6px 10px;
+  border: 2px solid var(--c-ink);
+  margin-bottom: var(--s-5);
+}
+.hero h1 {
+  font: var(--t-display);
+  font-size: clamp(56px, 8vw, 96px);
+  color: var(--c-ink);
+  margin: 0 0 var(--s-5);
+  letter-spacing: -0.045em;
+  line-height: 0.85;
+}
+.hero h1 .mag { color: var(--c-magenta); }
+.hero p {
+  font-size: 22px;
+  color: var(--c-ink);
+  line-height: 1.4;
+  max-width: 720px;
+  margin: 0 0 var(--s-5);
+}
+.hero .badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: var(--s-6); }
+.hero .badge-row .badge { color: var(--c-ink); border-color: var(--c-ink); background: rgba(7,3,14,0.06); }
+.hero .btn-row { display: flex; gap: var(--s-4); flex-wrap: wrap; }
+
+/* ── SECTION HEADERS ─────────────────────────── */
+.sec-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-5);
+  padding: var(--s-8) 0 var(--s-5);
+  border-bottom: var(--b-med) solid var(--rule);
+  margin-bottom: var(--s-7);
+}
+.sec-head .sec-tag {
+  font: var(--t-tag);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--bg-elevated);
+  padding: 6px 10px;
+  border: var(--b-thin) solid var(--accent);
+  box-shadow: 4px 4px 0 0 var(--accent);
+  flex-shrink: 0;
+}
+.sec-head h2 {
+  font: var(--t-h1);
+  margin: 0;
+  letter-spacing: -0.03em;
+  color: var(--fg);
+}
+
+/* ── STEPS ───────────────────────────────────── */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-5);
+}
+.step-num {
+  font: var(--t-display);
+  font-size: 64px;
+  color: var(--accent);
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin-bottom: var(--s-3);
+}
+
+/* ── FEATURES ────────────────────────────────── */
+.features {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--s-5);
+}
+
+/* ── FOOTER ──────────────────────────────────── */
+.foot {
+  border-top: var(--b-med) solid var(--rule);
+  padding: var(--s-7) 0;
+  margin-top: var(--s-9);
+}
+.foot .row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font: var(--t-tag);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+  flex-wrap: wrap;
+  gap: var(--s-4);
+}
+
+/* ── RESPONSIVE ──────────────────────────────── */
+@media (max-width: 768px) {
+  .wrap { padding: 0 var(--s-5); }
+  .hero { padding: var(--s-7) 0 var(--s-6); }
+  .hero h1 { font-size: clamp(40px, 10vw, 72px); }
+  .hero p { font-size: 18px; }
+  .steps { grid-template-columns: 1fr; }
+  .features { grid-template-columns: 1fr; }
+  .sec-head { flex-direction: column; gap: var(--s-3); }
+  .foot .row { flex-direction: column; align-items: flex-start; }
+  .code-body { font-size: 12px; }
+}
+</style>
+</head>
+<body class="ws-grid">
+
+<!-- HERO -->
+<div class="surface-acid" style="background:var(--bg);">
+  <div class="wrap">
+    <div class="hero">
+      <div class="eyebrow">// GITHUB ACTION &middot; MARKETPLACE &middot; v1</div>
+      <h1>GUEST<span class="mag">BOOK.</span></h1>
+      <p>Turn GitHub Issues into a community guestbook. One action, zero config, entries land straight in your README.</p>
+      <div class="badge-row">
+        <span class="badge"><span class="pulse"></span>COMPOSITE ACTION</span>
+        <span class="badge">MIT LICENSE</span>
+        <span class="badge">ZERO DEPENDENCIES</span>
+      </div>
+      <div class="btn-row">
+        <a href="https://github.com/zackkitzmiller/gha-guestbook" class="btn btn--primary">VIEW ON GITHUB <span class="glyph">&rarr;</span></a>
+        <a href="#usage" class="btn btn--ghost">GET STARTED</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="wrap">
+  <div class="sec-head">
+    <div class="sec-tag">01 &middot; HOW IT WORKS</div>
+    <h2>THREE STEPS</h2>
+  </div>
+
+  <div class="steps">
+    <div class="card" style="box-shadow: var(--sh-mag);">
+      <div class="step-num">01</div>
+      <div class="eyebrow">// OPEN ISSUE</div>
+      <div class="title">VISITOR SIGNS</div>
+      <div class="body">Anyone opens an issue with your configured label. The issue title becomes their greeting, the body their message.</div>
+    </div>
+    <div class="card" style="box-shadow: var(--sh-royal);">
+      <div class="step-num">02</div>
+      <div class="eyebrow">// ACTION RUNS</div>
+      <div class="title">ENTRY WRITTEN</div>
+      <div class="body">The action sanitizes input, appends a formatted blockquote between your README markers, and updates the entry count.</div>
+    </div>
+    <div class="card" style="box-shadow: var(--sh-stack);">
+      <div class="step-num">03</div>
+      <div class="eyebrow">// AUTO CLOSE</div>
+      <div class="title">ISSUE RESOLVED</div>
+      <div class="body">A thank-you comment is posted and the issue closes automatically. The guestbook entry lives on in your README.</div>
+    </div>
+  </div>
+</div>
+
+<!-- USAGE -->
+<div class="wrap" id="usage">
+  <div class="sec-head">
+    <div class="sec-tag">02 &middot; USAGE</div>
+    <h2>DROP-IN WORKFLOW</h2>
+  </div>
+
+  <div class="code">
+    <div class="code-head">
+      <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+      .github/workflows/guestbook.yml
+    </div>
+    <div class="code-body"><span class="k">name:</span> <span class="s">Guestbook</span>
+<span class="k">on:</span>
+  <span class="k">issues:</span>
+    <span class="k">types:</span> [<span class="s">opened</span>]
+
+<span class="k">permissions:</span>
+  <span class="k">contents:</span> <span class="s">write</span>
+  <span class="k">issues:</span> <span class="s">write</span>
+
+<span class="k">jobs:</span>
+  <span class="k">sign:</span>
+    <span class="k">runs-on:</span> <span class="s">ubuntu-latest</span>
+    <span class="k">steps:</span>
+      - <span class="k">uses:</span> <span class="s">actions/checkout@v4</span>
+      - <span class="k">name:</span> <span class="s">Sign guestbook</span>
+        <span class="k">uses:</span> <span class="s">zackkitzmiller/gha-guestbook@v1</span>
+        <span class="k">with:</span>
+          <span class="k">github_token:</span> <span class="s">${{ secrets.GITHUB_TOKEN }}</span></div>
+  </div>
+
+  <p style="color: var(--fg-muted); margin-top: var(--s-5); max-width: 720px;">
+    Add the markers <code class="icode">&lt;!-- GUESTBOOK:START --&gt;</code> and <code class="icode">&lt;!-- GUESTBOOK:END --&gt;</code> to your README, plus a count header <code class="icode">## &#x1f4d6; GuestBook &mdash; 0 Entries</code>.
+  </p>
+</div>
+
+<!-- FEATURES -->
+<div class="wrap">
+  <div class="sec-head">
+    <div class="sec-tag">03 &middot; FEATURES</div>
+    <h2>WHAT YOU GET</h2>
+  </div>
+
+  <div class="features">
+    <div class="card" style="box-shadow: var(--sh-mag);">
+      <div class="eyebrow">// LABEL GATE</div>
+      <div class="title">FILTERED ENTRIES</div>
+      <div class="body">Only issues with your configured label trigger a guestbook write. Default: <code class="icode">guestbook</code>. Change it to anything.</div>
+    </div>
+    <div class="card" style="box-shadow: var(--sh-royal);">
+      <div class="eyebrow">// AUTO CLOSE</div>
+      <div class="title">CLEAN ISSUES TAB</div>
+      <div class="body">Posts a thank-you comment and closes the issue automatically. Toggle off with <code class="icode">close_issue: 'false'</code>.</div>
+    </div>
+    <div class="card" style="box-shadow: var(--sh-md);">
+      <div class="eyebrow">// LIVE COUNT</div>
+      <div class="title">ENTRY COUNTER</div>
+      <div class="body">The guestbook header updates automatically &mdash; always reflects the real number of entries between your markers.</div>
+    </div>
+    <div class="card" style="box-shadow: var(--sh-stack);">
+      <div class="eyebrow">// FLEXIBLE</div>
+      <div class="title">CUSTOM PATHS</div>
+      <div class="body">Point at any markdown file with <code class="icode">readme_path</code>. Put your guestbook in <code class="icode">GUESTBOOK.md</code> or anywhere else.</div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="foot">
+  <div class="wrap">
+    <div class="row">
+      <div><span style="display:inline-block;width:8px;height:8px;background:var(--c-magenta);margin-right:8px;vertical-align:middle;"></span>GHA-GUESTBOOK</div>
+      <div>SPACE GROTESK &middot; JETBRAINS MONO</div>
+      <div>OPEN SOURCE &middot; MIT</div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

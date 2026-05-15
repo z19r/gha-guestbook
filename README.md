@@ -43,7 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Sign guestbook
-        uses: your-org/gha-guestbook@v1
+        uses: z19r/gha-guestbook@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           guestbook_label: guestbook

@@ -16,7 +16,7 @@ check-action:
 
 check-readme:
 	@test -f README.md || (echo "missing README.md"; exit 1)
-	@rg -q "uses: your-org/gha-guestbook@v1" README.md || 	  (echo "README missing usage example"; exit 1)
+	@rg -q "uses: z19r/gha-guestbook@v1" README.md || 	  (echo "README missing usage example"; exit 1)
 	@echo "readme checks passed"
 
 check-marketplace:

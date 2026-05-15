@@ -27,5 +27,5 @@ This is a single-file composite action (`action.yml`). All logic lives inline in
 ## Constraints
 
 - No `.github/workflows/` directory allowed — `just check-marketplace` enforces this for Marketplace listing.
-- The README must contain `uses: your-org/gha-guestbook@v1` for `just check-readme` to pass.
+- The README must contain `uses: z19r/gha-guestbook@v1` for `just check-readme` to pass.
 - Entry count is derived by counting lines starting with `> **` between the guestbook markers, not stored separately.
